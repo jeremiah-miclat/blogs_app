@@ -1,3 +1,4 @@
+import 'package:blogs_app/pages/create_blog.dart';
 import 'package:blogs_app/pages/home.dart';
 import 'package:blogs_app/pages/login.dart';
 import 'package:blogs_app/pages/profile.dart';
@@ -46,7 +47,7 @@ class MyApp extends StatelessWidget {
         '/register': (_) => const RegisterPage(),
         '/blogs': (_) => const HomePage(),
         '/profile': (_) => const ProfilePage(),
-        '/create': (_) => const ProfilePage(),
+        '/create': (_) => const CreateBlogPage(),
       },
     );
   }

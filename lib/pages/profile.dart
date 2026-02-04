@@ -23,8 +23,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final _usernameCtrl = TextEditingController();
 
-  String? _imgExt;
-
   PlatformFile? _pfImage;
   String? _imgUrl;
 
@@ -223,7 +221,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } else {
       if (mounted) {
         setState(() {
-          _imgExt = ext;
           _pfImage = file;
         });
         return true;
@@ -367,24 +364,25 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 12),
 
-                  OutlinedButton(
-                    onPressed: () {
-                      setState(() => _showPosts = !_showPosts);
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _showPosts ? "Hide Blog Posts" : "Show Blog Posts",
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          _showPosts ? Icons.expand_less : Icons.expand_more,
-                        ),
-                      ],
+                  if (_blogs.isNotEmpty)
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() => _showPosts = !_showPosts);
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _showPosts ? "Hide Blog Posts" : "Show Blog Posts",
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            _showPosts ? Icons.expand_less : Icons.expand_more,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 12),
 
