@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:blogs_app/ext/snackbar_ext.dart';
+import 'package:blogs_app/pages/blog_page.dart';
 import 'package:blogs_app/repository/blogs.dart';
+import 'package:blogs_app/services/db_realtime_service.dart';
+import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,15 +20,95 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _loading = true;
   List<Map<String, dynamic>> _blogs = [];
-  final _blogRepo = BlogsRepository();
+  final _blogRepo = BlogsRepository(SupabaseService.client);
+
+  StreamSubscription? _realtimeSub;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    SupabaseRealtimeService.instance.start();
+
+    _realtimeSub = SupabaseRealtimeService.instance.stream.listen((
+      event,
+    ) async {
+      // if (!mounted) return;
+
+      if (event['table'] == 'blogs' && event['event'] == 'INSERT') {
+        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+        final newRow = event['new'];
+        final newUserId = (newRow is Map)
+            ? newRow['user_id']?.toString()
+            : null;
+
+        if (currentUserId != null && newUserId == currentUserId) {
+          return;
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('New blog posted. Tap to reload.'),
+              action: SnackBarAction(
+                label: 'Reload',
+                onPressed: () {
+                  _loadData();
+                },
+              ),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+      }
+
+      if (event['table'] == 'blogs' && event['event'] == 'UPDATE') {
+        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+        final newRow = event['new'];
+        final newUserId = (newRow is Map)
+            ? newRow['user_id']?.toString()
+            : null;
+        if (currentUserId != null && newUserId == currentUserId) {
+          return;
+        }
+        if (newRow == null) return;
+        final blogId = newRow['id'];
+        try {
+          final fetchedBlog = await _blogRepo.getBlogById(blogId);
+
+          final fetchedId = fetchedBlog['id'];
+          final index = _blogs.indexWhere((b) => b['id'] == fetchedId);
+          debugPrint('update: $fetchedBlog');
+          if (index != -1) {
+            setState(() {
+              _blogs[index] = {...Map<String, dynamic>.from(_blogs[index])};
+            });
+          }
+        } catch (e) {
+          debugPrint(e.toString());
+        }
+      }
+
+      if (event['table'] == 'blogs' && event['event'] == 'DELETE') {
+        final oldRow = event['old'];
+        if (oldRow == null) return;
+        final blogId = oldRow['id'];
+        try {
+          setState(() {
+            _blogs.removeWhere((b) => b['id'] == blogId);
+          });
+        } catch (e) {
+          debugPrint(e.toString());
+        }
+      }
+    });
   }
 
   Future<void> _loadData() async {
+    debugPrint('Home page loads data');
     if (_blogRepo.currentUser == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) context.showSnack('You are not logged in');
@@ -56,6 +142,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = Supabase.instance.client.storage.from('blogs-image');
+
     return Scaffold(
       drawer: const Drawer(child: Center(child: Text('Drawer Menu'))),
       appBar: Appbar.build(
@@ -63,7 +151,11 @@ class _HomePageState extends State<HomePage> {
         title: 'Blog App',
         isHome: true,
         onProfileTap: () {
-          Navigator.pushNamed(context, '/profile');
+          Navigator.pushNamed(
+            context,
+            '/profile',
+            arguments: {'blogs': _blogs},
+          );
         },
       ),
       body: _loading
@@ -81,33 +173,21 @@ class _HomePageState extends State<HomePage> {
                         final title = (blog['title'] ?? '').toString();
                         final author = (blog['author_name'] ?? '').toString();
                         final content = (blog['content'] ?? '').toString();
-                        final rawImages = blog['images_path'];
 
-                        final List<String> images = rawImages is List
-                            ? rawImages.map((e) => e.toString()).toList()
-                            : rawImages is String
-                            ? (rawImages
-                                  .replaceAll('[', '')
-                                  .replaceAll(']', '')
-                                  .split(',')
-                                  .map((s) => s.trim().replaceAll('"', ''))
-                                  .where((s) => s.isNotEmpty)
-                                  .toList())
-                            : <String>[];
+                        final imgs =
+                            (blog['images_path'] as List?)?.cast<String>() ??
+                            [];
 
-                        final thumbUrl = images.isNotEmpty
-                            ? images.first
-                            : null;
+                        final thumbUrl = imgs.isNotEmpty ? imgs.first : null;
 
                         return InkWell(
                           onTap: () {
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (_) =>
-                            //         BlogDetailsPage(blogId: blog['id'].toString()),
-                            //   ),
-                            // );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BlogPage(blog: blog),
+                              ),
+                            );
                           },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -122,7 +202,7 @@ class _HomePageState extends State<HomePage> {
                                     color: Colors.grey.shade300,
                                     child: thumbUrl != null
                                         ? Image.network(
-                                            thumbUrl,
+                                            storage.getPublicUrl(thumbUrl),
                                             fit: BoxFit.cover,
                                           )
                                         : const Icon(Icons.article),

@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class PublicProfilePage extends StatefulWidget {
+  final String userId;
+  final String authorName;
+
+  const PublicProfilePage({
+    super.key,
+    required this.userId,
+    required this.authorName,
+  });
+
+  @override
+  State<PublicProfilePage> createState() => _PublicProfilePageState();
+}
+
+class _PublicProfilePageState extends State<PublicProfilePage> {
+  String? _avatarUrl;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    try {
+      final storage =
+          Supabase.instance.client.storage.from('profiles-image');
+
+      final files = await storage.list(path: widget.userId);
+
+      if (files.isNotEmpty) {
+        final file = files.first;
+        final path = '${widget.userId}/${file.name}';
+        _avatarUrl = storage.getPublicUrl(path);
+      }
+    } catch (_) {
+
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Public Profile Page')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            if (_loading)
+              const CircularProgressIndicator()
+            else
+              CircleAvatar(
+                radius: 48,
+                backgroundImage:
+                    _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                child: _avatarUrl == null
+                    ? Text(
+                        widget.authorName.isNotEmpty
+                            ? widget.authorName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(fontSize: 28),
+                      )
+                    : null,
+              ),
+            const SizedBox(height: 12),
+            Text(
+              widget.authorName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

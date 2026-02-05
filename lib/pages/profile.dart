@@ -1,5 +1,6 @@
 import 'package:blogs_app/ext/snackbar_ext.dart';
 import 'package:blogs_app/repository/blogs.dart';
+import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
   User? _user;
   bool _showPosts = false;
   bool _isUpdating = false;
-  final _blogsRepo = BlogsRepository();
+  // final _blogsRepo = BlogsRepository(SupabaseService.client);
 
   String? _username;
 
@@ -25,8 +26,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   PlatformFile? _pfImage;
   String? _imgUrl;
-
-  List<Map<String, dynamic>> _blogs = [];
 
   @override
   void initState() {
@@ -52,11 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
       } else {
         _user = user;
         final userId = user.id;
-        final blogs = await _blogsRepo.getBlogsByUserId(userId);
-        debugPrint(blogs.toString());
-        setState(() {
-          _blogs = blogs;
-        });
+
         username = user.userMetadata?['display_name'].toString();
         // debugPrint('Userid: $userId');
         final img = await Supabase.instance.client.storage
@@ -302,6 +297,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = _user;
+    final args = ModalRoute.of(context)!.settings.arguments as Map?;
+    final blogs = (args?['blogs'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     final avatar = CircleAvatar(
       radius: 52,
@@ -316,141 +313,133 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: Appbar.build(context, title: 'Profile Page'),
       body: Padding(
         padding: const EdgeInsets.all(12),
-        child: _loading
-            ? CircularProgressIndicator()
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(child: avatar),
-                  const SizedBox(height: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: avatar),
+            const SizedBox(height: 12),
 
-                  Center(
-                    child: Text(
-                      _username != null ? _username! : 'Not set',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+            Center(
+              child: Text(
+                _username != null ? _username! : 'Not set',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            Center(
+              child: Text(
+                user?.email != null ? '@${user!.email}' : '@user',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            const SizedBox(height: 16),
+
+            OutlinedButton(
+              onPressed: _editProfile,
+              child: const Text('Edit Profile'),
+            ),
+            const SizedBox(height: 8),
+
+            OutlinedButton(
+              onPressed: _loading ? null : _logout,
+              child: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Log Out'),
+            ),
+
+            const SizedBox(height: 12),
+
+            if (blogs.isNotEmpty)
+              OutlinedButton(
+                onPressed: () {
+                  setState(() => _showPosts = !_showPosts);
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_showPosts ? "Hide Blog Posts" : "Show Blog Posts"),
+                    const SizedBox(width: 8),
+                    Icon(_showPosts ? Icons.expand_less : Icons.expand_more),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 12),
+
+            if (_showPosts)
+              Expanded(
+                child: ListView.separated(
+                  itemCount: blogs.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final blog = blogs[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
 
-                  Center(
-                    child: Text(
-                      user?.email != null ? '@${user!.email}' : '@user',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: blog['image_path'] != null
+                            ? Image.network(
+                                blog['image_path'],
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.article),
+                      ),
 
-                  const SizedBox(height: 16),
+                      title: Text(
+                        blog['title']?.toString() ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
 
-                  OutlinedButton(
-                    onPressed: _editProfile,
-                    child: const Text('Edit Profile'),
-                  ),
-                  const SizedBox(height: 8),
-
-                  OutlinedButton(
-                    onPressed: _loading ? null : _logout,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Log Out'),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (_blogs.isNotEmpty)
-                    OutlinedButton(
-                      onPressed: () {
-                        setState(() => _showPosts = !_showPosts);
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const SizedBox(height: 4),
                           Text(
-                            _showPosts ? "Hide Blog Posts" : "Show Blog Posts",
+                            blog['content']?.toString() ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            _showPosts ? Icons.expand_less : Icons.expand_more,
+                          const SizedBox(height: 4),
+                          Text(
+                            'by ${blog['author_name']}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
-                    ),
 
-                  const SizedBox(height: 12),
+                      trailing: const Icon(Icons.chevron_right),
 
-                  if (_showPosts)
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: _blogs.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final blog = _blogs[index];
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-
-                            leading: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: blog['image_path'] != null
-                                  ? Image.network(
-                                      blog['image_path'],
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const Icon(Icons.article),
-                            ),
-
-                            title: Text(
-                              blog['title']?.toString() ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  blog['content']?.toString() ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'by ${blog['author_name']}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-
-                            trailing: const Icon(Icons.chevron_right),
-
-                            onTap: () {},
-                          );
-                        },
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                ],
-              ),
+                      onTap: () {},
+                    );
+                  },
+                ),
+              )
+            else
+              const Spacer(),
+          ],
+        ),
       ),
     );
   }

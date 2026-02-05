@@ -1,4 +1,5 @@
 import 'package:blogs_app/repository/blogs.dart';
+import 'package:blogs_app/services/supabase_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -10,7 +11,7 @@ class CreateBlogPage extends StatefulWidget {
 }
 
 class _CreateBlogPageState extends State<CreateBlogPage> {
-  final _blogRepo = BlogsRepository();
+  final _blogRepo = BlogsRepository(SupabaseService.client);
 
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
