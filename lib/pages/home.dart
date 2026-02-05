@@ -6,6 +6,7 @@ import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
+import 'package:blogs_app/widgets/profile_avatar.dart';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -217,10 +218,9 @@ class _HomePageState extends State<HomePage> {
                         final blog = _blogs[index];
 
                         final title = (blog['title'] ?? '').toString();
-                        final author = ('By: ${blog['author_name']}')
-                            .toString();
+                        final author = ('${blog['author_name']}').toString();
                         final content = (blog['content'] ?? '').toString();
-
+                        final authorId = ('${blog['user_id']}').toString();
                         final imgs =
                             (blog['images_path'] as List?)?.cast<String>() ??
                             [];
@@ -274,6 +274,28 @@ class _HomePageState extends State<HomePage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          ProfileAvatar(
+                                            supabaseClient:
+                                                SupabaseService.client,
+                                            userId: authorId,
+                                            authorName: author,
+                                            radius: 12,
+                                          ),
+                                          SizedBox(width: 5),
+                                          Text(
+                                            author,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodyMedium,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
                                       Text(
                                         title,
                                         maxLines: 1,
@@ -283,15 +305,7 @@ class _HomePageState extends State<HomePage> {
                                           fontSize: 14,
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        author,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
-                                      ),
+
                                       const SizedBox(height: 4),
                                       Text(
                                         content,

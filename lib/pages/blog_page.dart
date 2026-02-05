@@ -7,6 +7,7 @@ import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/image_preview.dart';
+import 'package:blogs_app/widgets/profile_avatar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -440,24 +441,11 @@ class _BlogPageState extends State<BlogPage> {
                             ),
                           );
                         },
-                  child: CircleAvatar(
+                  child: ProfileAvatar(
+                    supabaseClient: SupabaseService.client,
+                    userId: authorId!,
+                    authorName: authorName,
                     radius: 20,
-                    backgroundImage: _ownerAvatar != null
-                        ? NetworkImage(_ownerAvatar!)
-                        : null,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: _ownerAvatar == null
-                        ? Text(
-                            authorName.isNotEmpty
-                                ? authorName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )
-                        : null,
                   ),
                 ),
 
@@ -659,6 +647,7 @@ class _CommentTile extends StatelessWidget {
     final storage = Supabase.instance.client.storage.from('comments-image');
 
     final commentUserId = comment['user_id']?.toString();
+    final commenterName = comment['author_name']?.toString();
     final isOwner =
         currentUserId != null &&
         commentUserId != null &&
@@ -677,9 +666,20 @@ class _CommentTile extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  (comment['author_name'] ?? 'Unknown').toString(),
-                  style: Theme.of(context).textTheme.labelLarge,
+                child: Row(
+                  children: [
+                    ProfileAvatar(
+                      supabaseClient: SupabaseService.client,
+                      userId: commentUserId!,
+                      authorName: commenterName ?? 'Not set',
+                      radius: 10,
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      (comment['author_name'] ?? 'Unknown').toString(),
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ],
                 ),
               ),
               if (isOwner)
@@ -693,7 +693,7 @@ class _CommentTile extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           Text((comment['content'] ?? '').toString()),
 
           if (imgs.isNotEmpty) ...[
