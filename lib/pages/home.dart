@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
   bool _loading = true;
   List<Map<String, dynamic>> _blogs = [];
   final _blogRepo = BlogsRepository(SupabaseService.client);
-
+  String? _userAvatar;
   StreamSubscription? _realtimeSub;
 
   @override
@@ -122,6 +122,25 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final blogs = await _blogRepo.getAllBlogs();
+      final userId = _blogRepo.currentUser?.id;
+      if (userId == null) return;
+      final img = await Supabase.instance.client.storage
+          .from('profiles-image')
+          .list(path: _blogRepo.currentUser?.id.toString());
+
+      if (img.isNotEmpty) {
+        final imgPath = img
+            .map((img) => '$userId/${img.name}')
+            .first
+            .toString();
+        final imgUrl = Supabase.instance.client.storage
+            .from('profiles-image')
+            .getPublicUrl(imgPath);
+        if (mounted) {
+          _userAvatar = imgUrl;
+        }
+        // debugPrint('ImgUrl: $imgUrl');
+      }
       // debugPrint('Blogs: $blogs');
       if (!mounted) return;
       setState(() {
@@ -157,13 +176,33 @@ class _HomePageState extends State<HomePage> {
         context,
         title: 'Blog App',
         isHome: true,
-        onProfileTap: () {
-          Navigator.pushNamed(
+        onProfileTap: () async {
+          final result = await Navigator.pushNamed(
             context,
             '/profile',
             arguments: {'blogs': _blogs},
           );
+          if (!mounted) return;
+
+          if (result == true) {
+            _loadData();
+          }
+
+          if (result is Map<String, dynamic>) {
+            final index = _blogs.indexWhere((b) => b['id'] == result['id']);
+            if (index != -1) {
+              setState(() {
+                _blogs[index] = result;
+              });
+            } else {
+              setState(() {
+                _blogs.insert(0, result);
+              });
+            }
+          }
         },
+        user: SupabaseService.user,
+        avatarurl: _userAvatar,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

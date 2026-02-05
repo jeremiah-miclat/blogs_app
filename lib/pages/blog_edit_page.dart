@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
+import 'package:blogs_app/widgets/image_preview.dart';
+import 'package:blogs_app/widgets/image_preview_edit.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -242,44 +244,12 @@ class _BlogEditPageState extends State<BlogEditPage> {
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    children: [
-                      for (final img in _existingImages)
-                        ListTile(
-                          leading: Checkbox(
-                            value: _toRemoveImgUrls.contains(img),
-                            onChanged: _submitting
-                                ? null
-                                : (_) => _toggleRemoveExisting(img),
-                          ),
-                          title: Text(
-                            img.toString(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            _toRemoveImgUrls.contains(img)
-                                ? 'Will be removed'
-                                : 'Keep',
-                          ),
-                          trailing: SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                storage.getPublicUrl(img.toString()),
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) =>
-                                    const Icon(Icons.broken_image),
-                              ),
-                            ),
-                          ),
-                          onTap: _submitting
-                              ? null
-                              : () => _toggleRemoveExisting(img),
-                        ),
-                    ],
+                  child: ImagePreviewEdit(
+                    images: _existingImages.cast<String>(),
+                    markedForDelete: _toRemoveImgUrls.toSet(),
+                    disabled: _submitting,
+                    storeUrl: (p) => storage.getPublicUrl(p),
+                    toggleRemoveExisting: _toggleRemoveExisting,
                   ),
                 ),
 
@@ -310,26 +280,10 @@ class _BlogEditPageState extends State<BlogEditPage> {
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < _newImgs.length; i++)
-                        ListTile(
-                          title: Text(
-                            _newImgs[i].name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${(_newImgs[i].size / (1024 * 1024)).toStringAsFixed(2)} MB',
-                          ),
-                          trailing: IconButton(
-                            onPressed: _submitting
-                                ? null
-                                : () => _removeNewAt(i),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ),
-                    ],
+                  child: ImagePreview(
+                    images: _newImgs,
+                    disabled: _submitting,
+                    onRemove: _removeNewAt,
                   ),
                 ),
               ],

@@ -6,6 +6,7 @@ import 'package:blogs_app/pages/public_profile_page';
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
+import 'package:blogs_app/widgets/image_preview.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -23,12 +24,13 @@ class BlogPage extends StatefulWidget {
 class _BlogPageState extends State<BlogPage> {
   bool _loading = true;
   bool _isOwner = false;
-
+  String? _ownerAvatar;
+  String? _ownerName;
   Map<String, dynamic>? _blog;
 
   final _blogRepo = BlogsRepository(Supabase.instance.client);
 
-  bool _showComments = false;
+  bool _showComments = true;
   bool _commentsLoading = false;
   bool _commentSubmitting = false;
   bool _commentsLoadedOnce = false;
@@ -123,9 +125,10 @@ class _BlogPageState extends State<BlogPage> {
     super.initState();
     _blog = widget.blog;
     _loadOwner();
-
+    _ownerName = widget.blog['author_name'] ?? 'Not set';
     SupabaseRealtimeService.instance.start();
     _startRealtime();
+    _reloadComments();
   }
 
   void _startRealtime() {
@@ -255,11 +258,27 @@ class _BlogPageState extends State<BlogPage> {
     try {
       final currentUser = Supabase.instance.client.auth.currentUser;
       final userId = currentUser?.id;
-
+      final ownerId = _blog!['user_id'];
       if (!mounted) return;
+      final img = await Supabase.instance.client.storage
+          .from('profiles-image')
+          .list(path: ownerId.toString());
 
+      if (img.isNotEmpty) {
+        final imgPath = img
+            .map((img) => '$ownerId/${img.name}')
+            .first
+            .toString();
+
+        final ownerAvatar = Supabase.instance.client.storage
+            .from('profiles-image')
+            .getPublicUrl(imgPath);
+        setState(() {
+          _ownerAvatar = ownerAvatar;
+        });
+      }
       setState(() {
-        _isOwner = _blog!['user_id'] == userId;
+        _isOwner = ownerId == userId;
 
         _loading = false;
       });
@@ -398,35 +417,82 @@ class _BlogPageState extends State<BlogPage> {
               const SizedBox(height: 16),
             ],
 
+            // Text(
+            //   _blog!['title'] ?? '',
+            //   style: Theme.of(context).textTheme.headlineSmall,
+            // ),
+            // const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(48),
+                  onTap: authorId == null
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfilePage(
+                                userId: authorId,
+                                authorName: authorName,
+                              ),
+                            ),
+                          );
+                        },
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: _ownerAvatar != null
+                        ? NetworkImage(_ownerAvatar!)
+                        : null,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: _ownerAvatar == null
+                        ? Text(
+                            authorName.isNotEmpty
+                                ? authorName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                InkWell(
+                  onTap: authorId == null
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfilePage(
+                                userId: authorId,
+                                authorName: authorName,
+                              ),
+                            ),
+                          );
+                        },
+                  child: Text(
+                    'By $authorName',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
             Text(
               _blog!['title'] ?? '',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 6),
-
-            GestureDetector(
-              onTap: authorId == null
-                  ? null
-                  : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PublicProfilePage(
-                            userId: authorId,
-                            authorName: authorName,
-                          ),
-                        ),
-                      );
-                    },
-              child: Text(
-                'By $authorName',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 24),
             Text(
               _blog!['content'] ?? '',
               style: Theme.of(context).textTheme.bodyMedium,
@@ -435,7 +501,7 @@ class _BlogPageState extends State<BlogPage> {
             const SizedBox(height: 24),
 
             if (imgs.isNotEmpty) ...[
-              Text('Images', style: Theme.of(context).textTheme.titleMedium),
+              // Text('Images', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               for (final img in imgs)
                 Padding(
@@ -517,21 +583,16 @@ class _BlogPageState extends State<BlogPage> {
               const Divider(),
 
               if (_commentImgs.isNotEmpty) ...[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (int i = 0; i < _commentImgs.length; i++)
-                      Chip(
-                        label: Text(
-                          _commentImgs[i].name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onDeleted: _commentSubmitting
-                            ? null
-                            : () => _removeCommentImgAt(i),
-                      ),
-                  ],
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ImagePreview(
+                    images: _commentImgs,
+                    disabled: _commentSubmitting,
+                    onRemove: _removeCommentImgAt,
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],

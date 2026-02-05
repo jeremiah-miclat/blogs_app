@@ -10,4 +10,5 @@ class SupabaseService {
   }
 
   static SupabaseClient get client => Supabase.instance.client;
+  static User? get user => Supabase.instance.client.auth.currentUser;
 }

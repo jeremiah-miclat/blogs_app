@@ -1,5 +1,6 @@
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/supabase_service.dart';
+import 'package:blogs_app/widgets/image_preview.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -221,24 +222,10 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < _images.length; i++)
-                        ListTile(
-                          title: Text(
-                            _images[i].name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                          trailing: IconButton(
-                            onPressed: _submitting
-                                ? null
-                                : () => _removeImageAt(i),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ),
-                    ],
+                  child: ImagePreview(
+                    images: _images,
+                    disabled: _submitting,
+                    onRemove: _removeImageAt,
                   ),
                 ),
 

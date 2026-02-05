@@ -1,4 +1,6 @@
 import 'package:blogs_app/ext/snackbar_ext.dart';
+import 'package:blogs_app/pages/blog_page.dart';
+import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -19,11 +21,13 @@ class _ProfilePageState extends State<ProfilePage> {
   // final _blogsRepo = BlogsRepository(SupabaseService.client);
 
   String? _username;
+  String? _userId;
 
   final _usernameCtrl = TextEditingController();
 
   PlatformFile? _pfImage;
   String? _imgUrl;
+  Map<String, dynamic>? _blog;
 
   @override
   void initState() {
@@ -48,6 +52,7 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       } else {
         _user = user;
+        _userId = user.id;
         final userId = user.id;
 
         username = user.userMetadata?['display_name'].toString();
@@ -104,6 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _editProfile() {
+    _usernameCtrl.text = _username ?? 'Not set yet';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -307,8 +313,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final user = _user;
     final args = ModalRoute.of(context)!.settings.arguments as Map?;
-    final blogs = (args?['blogs'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
+    final allBlogs =
+        (args?['blogs'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final blogs = allBlogs.where((b) => b['user_id'] == _userId).toList();
+    final storage = SupabaseService.client.storage.from('blogs-image');
     final avatar = CircleAvatar(
       radius: 52,
       backgroundImage: _pfImage != null
@@ -319,7 +327,14 @@ class _ProfilePageState extends State<ProfilePage> {
     );
 
     return Scaffold(
-      appBar: Appbar.build(context, title: 'Profile Page'),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        leading: BackButton(
+          onPressed: () {
+            Navigator.pop(context, _blog);
+          },
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -377,7 +392,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_showPosts ? "Hide Blog Posts" : "Show Blog Posts"),
+                    Text(
+                      _showPosts
+                          ? "Hide Your Blog Posts"
+                          : "Show Your Blog Posts",
+                    ),
                     const SizedBox(width: 8),
                     Icon(_showPosts ? Icons.expand_less : Icons.expand_more),
                   ],
@@ -387,66 +406,108 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 12),
 
             if (_showPosts)
-              Expanded(
-                child: ListView.separated(
-                  itemCount: blogs.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final blog = blogs[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+              if (_showPosts)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: ListView.separated(
+                      itemCount: blogs.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final blog = blogs[index];
 
-                      leading: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: blog['image_path'] != null
-                            ? Image.network(
-                                blog['image_path'],
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(Icons.article),
-                      ),
+                        final title = (blog['title'] ?? '').toString();
+                        final author =
+                            'By: ${(blog['author_name'] ?? '').toString()}';
+                        final content = (blog['content'] ?? '').toString();
 
-                      title: Text(
-                        blog['title']?.toString() ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                        final imgs =
+                            (blog['images_path'] as List?)?.cast<String>() ??
+                            [];
 
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(
-                            blog['content']?.toString() ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                        final thumbPath = imgs.isNotEmpty ? imgs.first : null;
+
+                        return InkWell(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BlogPage(blog: blog),
+                              ),
+                            );
+
+                            if (!mounted || result == null) return;
+
+                            if (result != null) {
+                              if (mounted) {
+                                Navigator.pop(context, true);
+                              }
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.grey.shade300,
+                                    child: thumbPath != null
+                                        ? Image.network(
+                                            storage.getPublicUrl(thumbPath),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(Icons.broken_image),
+                                          )
+                                        : const Icon(Icons.article),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        author,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        content,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'by ${blog['author_name']}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: () {},
-                    );
-                  },
-                ),
-              )
-            else
-              const Spacer(),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
           ],
         ),
       ),
