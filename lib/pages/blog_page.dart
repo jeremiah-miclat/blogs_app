@@ -478,7 +478,7 @@ class _BlogPageState extends State<BlogPage> {
                           );
                         },
                   child: Text(
-                    'By $authorName',
+                    authorName,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       decoration: TextDecoration.underline,
                     ),

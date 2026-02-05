@@ -22,6 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String? _username;
   String? _userId;
+  bool _profileUpdated = false;
 
   final _usernameCtrl = TextEditingController();
 
@@ -293,6 +294,9 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
       if (mounted) {
+        setState(() {
+          _profileUpdated = true;
+        });
         context.showSnack('$uploadResult. $updateResult.');
       }
     } catch (e) {
@@ -331,7 +335,13 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Profile'),
         leading: BackButton(
           onPressed: () {
-            Navigator.pop(context, _blog);
+            final isUpdated = _profileUpdated;
+            if (mounted) {
+              setState(() {
+                _profileUpdated = false;
+              });
+            }
+            Navigator.pop(context, isUpdated);
           },
         ),
       ),
