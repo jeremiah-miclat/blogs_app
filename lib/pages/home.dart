@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
         if (currentUserId != null && newUserId == currentUserId) {
           return;
         }
-
+        debugPrint('Inserted: ${event['new']}');
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> {
           debugPrint('update: $fetchedBlog');
           if (index != -1) {
             setState(() {
-              _blogs[index] = {...Map<String, dynamic>.from(_blogs[index])};
+              _blogs[index] = fetchedBlog;
             });
           }
         } catch (e) {
@@ -141,6 +141,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _realtimeSub?.cancel();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final storage = Supabase.instance.client.storage.from('blogs-image');
 
@@ -171,7 +178,8 @@ class _HomePageState extends State<HomePage> {
                         final blog = _blogs[index];
 
                         final title = (blog['title'] ?? '').toString();
-                        final author = (blog['author_name'] ?? '').toString();
+                        final author = ('By: ${blog['author_name']}')
+                            .toString();
                         final content = (blog['content'] ?? '').toString();
 
                         final imgs =
@@ -181,13 +189,26 @@ class _HomePageState extends State<HomePage> {
                         final thumbUrl = imgs.isNotEmpty ? imgs.first : null;
 
                         return InkWell(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => BlogPage(blog: blog),
                               ),
                             );
+
+                            if (!mounted || result == null) return;
+
+                            if (result is Map<String, dynamic>) {
+                              final index = _blogs.indexWhere(
+                                (b) => b['id'] == result['id'],
+                              );
+                              if (index != -1) {
+                                setState(() {
+                                  _blogs[index] = result;
+                                });
+                              }
+                            }
                           },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -197,8 +218,8 @@ class _HomePageState extends State<HomePage> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(6),
                                   child: Container(
-                                    width: 52,
-                                    height: 52,
+                                    width: 100,
+                                    height: 100,
                                     color: Colors.grey.shade300,
                                     child: thumbUrl != null
                                         ? Image.network(
@@ -248,20 +269,23 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                   )),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final created = await Navigator.pushNamed(context, '/create');
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: 32, bottom: 32),
+        child: FloatingActionButton(
+          onPressed: () async {
+            final created = await Navigator.pushNamed(context, '/create');
 
-          if (!mounted) return;
-          if (created == null) return;
+            if (!mounted) return;
+            if (created == null) return;
 
-          debugPrint('created: $created');
+            // debugPrint('created: $created');
 
-          setState(() {
-            _blogs.insert(0, created as Map<String, dynamic>);
-          });
-        },
-        child: const Icon(Icons.add),
+            setState(() {
+              _blogs.insert(0, created as Map<String, dynamic>);
+            });
+          },
+          child: const Icon(Icons.add),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

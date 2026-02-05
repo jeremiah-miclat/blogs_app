@@ -1,5 +1,6 @@
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/supabase_service.dart';
+import 'package:blogs_app/widgets/appbar.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -72,13 +73,11 @@ class _BlogDeletePageState extends State<BlogDeletePage> {
   @override
   Widget build(BuildContext context) {
     final blog = widget.blog;
-    final images = (blog['images'] is List)
-        ? (blog['images'] as List)
-        : <dynamic>[];
+    final images = (blog['images_path'] as List? ?? []).cast<String>();
     final storage = Supabase.instance.client.storage.from('blogs-image');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Delete Blog Page')),
+      appBar: Appbar.build(context, title: 'Delete Blog'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

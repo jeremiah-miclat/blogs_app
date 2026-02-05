@@ -143,9 +143,12 @@ class _BlogPageState extends State<BlogPage> {
 
         if (type == 'UPDATE') {
           final blogId = _blog!['id'].toString();
-          final newRow = (event['new'] as Map?)?.cast<String, dynamic>();
+          final newRow = event['new'];
+
           if (newRow == null) return;
-          final newUserId = newRow['user_id']?.toString();
+          final newUserId = (newRow is Map)
+              ? newRow['user_id']?.toString()
+              : null;
           if (currentUserId != null && newUserId == currentUserId) {
             return;
           }
@@ -157,8 +160,7 @@ class _BlogPageState extends State<BlogPage> {
             final result = await _blogRepo.getBlogById(blogId);
             debugPrint('Update result: $result');
             setState(() {
-              // _blog = result
-              // _images = result.images;
+              _blog = result;
             });
           } catch (_) {
           } finally {
@@ -191,6 +193,7 @@ class _BlogPageState extends State<BlogPage> {
         if (type == 'INSERT') {
           final newRow = (event['new'] as Map?)?.cast<String, dynamic>();
           if (newRow == null) return;
+          if (!_commentsLoadedOnce) return;
 
           if (newRow['blog_id']?.toString() != blogId) return;
 
@@ -215,7 +218,6 @@ class _BlogPageState extends State<BlogPage> {
           if (deletedId == null || deletedId.isEmpty) return;
 
           if (!_commentsLoadedOnce) return;
-          if (!_showComments) return;
 
           setState(() {
             _comments.removeWhere((c) => c['id']?.toString() == deletedId);
@@ -438,9 +440,12 @@ class _BlogPageState extends State<BlogPage> {
               for (final img in imgs)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Image.network(
-                    storage.getPublicUrl(img),
-                    fit: BoxFit.cover,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    child: Image.network(
+                      storage.getPublicUrl(img),
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
             ],

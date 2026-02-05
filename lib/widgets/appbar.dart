@@ -21,7 +21,15 @@ class Appbar {
           : null,
 
       actions: isHome
-          ? [IconButton(onPressed: onProfileTap, icon: Icon(Icons.person))]
+          ? [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: IconButton(
+                  onPressed: onProfileTap,
+                  icon: const Icon(Icons.person),
+                ),
+              ),
+            ]
           : null,
     );
   }

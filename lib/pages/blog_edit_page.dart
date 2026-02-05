@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/supabase_service.dart';
+import 'package:blogs_app/widgets/appbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -43,8 +44,6 @@ class _BlogEditPageState extends State<BlogEditPage> {
     'heic',
     'heif',
   };
-
-  int get _newTotalBytes => _newImgs.fold<int>(0, (sum, f) => sum + f.size);
 
   String? _validateTitle(String? v) {
     final value = (v ?? '').trim();
@@ -190,21 +189,7 @@ class _BlogEditPageState extends State<BlogEditPage> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Blog Page'),
-        actions: [
-          TextButton(
-            onPressed: _submitting ? null : _save,
-            child: _submitting
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
-        ],
-      ),
+      appBar: Appbar.build(context, title: 'Edit Blog'),
       body: SafeArea(
         child: Form(
           key: _formKey,

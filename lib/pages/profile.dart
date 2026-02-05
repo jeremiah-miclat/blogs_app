@@ -1,6 +1,4 @@
 import 'package:blogs_app/ext/snackbar_ext.dart';
-import 'package:blogs_app/repository/blogs.dart';
-import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -175,9 +173,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   ElevatedButton(
                     onPressed: () async {
-                      final updateComplete = await _updateProfile();
-                      if (updateComplete) {
-                        _loadProfile();
+                      if (_loading) return;
+                      try {
+                        setState(() {
+                          _loading = true;
+                        });
+                        final updateComplete = await _updateProfile();
+                        if (updateComplete) {
+                          _loadProfile();
+                        }
+                      } finally {
+                        setState(() {
+                          _loading = false;
+                        });
                       }
                     },
                     child: const Text('Save'),
