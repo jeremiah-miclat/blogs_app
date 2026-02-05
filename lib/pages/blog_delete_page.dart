@@ -52,8 +52,9 @@ class _BlogDeletePageState extends State<BlogDeletePage> {
 
     final ok = await _confirmDelete();
     if (!ok) return;
-
-    setState(() => _deleting = true);
+    if (mounted) {
+      setState(() => _deleting = true);
+    }
 
     try {
       final blogId = widget.blog['id'].toString();
@@ -101,20 +102,23 @@ class _BlogDeletePageState extends State<BlogDeletePage> {
             const SizedBox(height: 24),
 
             if (images.isNotEmpty) ...[
-              Text('Images', style: Theme.of(context).textTheme.titleMedium),
+              // Text('Images', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               for (final img in images)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      storage.getPublicUrl(img.toString()),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        height: 160,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.broken_image),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      child: Image.network(
+                        storage.getPublicUrl(img.toString()),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Container(
+                          height: 160,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.broken_image),
+                        ),
                       ),
                     ),
                   ),

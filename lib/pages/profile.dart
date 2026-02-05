@@ -242,8 +242,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_isUpdating) return false;
     final displayName = _usernameCtrl.text.trim();
     final userId = _user?.id;
-    String? uploadResult = 'Nothing to upload';
-    String? updateResult = 'Nothing to update';
+    String? uploadResult = 'Avatar not updated';
+    String? updateResult = 'Display name not updated';
     // debugPrint('Display name: $displayName');
     // debugPrint('Image: $_pfImage');
     // debugPrint('UserId: $userId');
@@ -271,10 +271,11 @@ class _ProfilePageState extends State<ProfilePage> {
         if (imgList.isNotEmpty) {
           final imgPaths = imgList.map((img) => '$userId/${img.name}').toList();
           await storage.remove(imgPaths);
-          final uploadRes = await storage.uploadBinary(path, _pfImage!.bytes!);
-          if (uploadRes != '') {
-            uploadResult = 'Image updated';
-          }
+        }
+
+        final uploadRes = await storage.uploadBinary(path, _pfImage!.bytes!);
+        if (uploadRes != '') {
+          uploadResult = 'Avatar updated';
         }
       }
 
@@ -286,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
       if (mounted) {
-        context.showSnack('$uploadResult and $updateResult.');
+        context.showSnack('$uploadResult. $updateResult.');
       }
     } catch (e) {
       if (mounted) {
