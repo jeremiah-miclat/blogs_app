@@ -8,6 +8,7 @@ import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/edit_comment.dart';
 import 'package:blogs_app/widgets/image_preview.dart';
+import 'package:blogs_app/widgets/images_listview.dart';
 import 'package:blogs_app/widgets/profile_avatar.dart';
 import 'package:carousel_slider/carousel_options.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -585,75 +586,6 @@ class _BlogPageState extends State<BlogPage> {
             if (_showComments) ...[
               const SizedBox(height: 12),
 
-              if (_commentsLoading)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_comments.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No comments yet.'),
-                )
-              else
-                Column(
-                  children: [
-                    for (final c in _comments)
-                      _CommentTile(
-                        comment: c,
-                        currentUserId:
-                            Supabase.instance.client.auth.currentUser?.id,
-
-                        onEdit: () async {
-                          final blogId = _blog?['id']?.toString();
-                          final commentId = c['id']?.toString();
-                          if (blogId == null || commentId == null) return;
-
-                          final updated =
-                              await showDialog<Map<String, dynamic>>(
-                                context: context,
-                                builder: (_) => EditCommentDialog(
-                                  blogId: blogId,
-                                  comment: c,
-                                  blogRepo: _blogRepo,
-                                ),
-                              );
-
-                          if (!mounted || updated == null) return;
-
-                          // easiest: reload (keeps everything consistent with storage listing)
-                          await _reloadComments();
-                          _toast('Comment updated');
-                        },
-                        onDelete: () async {
-                          final blogId = _blog?['id']?.toString();
-                          final commentId = c['id']?.toString();
-                          if (blogId == null || commentId == null) return;
-
-                          final ok = await _confirmDeleteComment();
-                          if (!ok) return;
-
-                          try {
-                            await _blogRepo.deleteComment(
-                              blogId: blogId,
-                              commentId: commentId,
-                            );
-
-                            if (!mounted) return;
-
-                            _toast('Comment deleted');
-                            await _reloadComments();
-                          } catch (e) {
-                            _toast('Delete failed: $e');
-                          }
-                        },
-                      ),
-                  ],
-                ),
-
-              const SizedBox(height: 12),
-              const Divider(),
-
               if (_commentImgs.isNotEmpty) ...[
                 Container(
                   decoration: BoxDecoration(
@@ -704,6 +636,75 @@ class _BlogPageState extends State<BlogPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              if (_commentsLoading)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_comments.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No comments yet.'),
+                )
+              else
+                Column(
+                  children: [
+                    for (final c in _comments)
+                      _CommentTile(
+                        comment: c,
+                        currentUserId:
+                            Supabase.instance.client.auth.currentUser?.id,
+
+                        onEdit: () async {
+                          final blogId = _blog?['id']?.toString();
+                          final commentId = c['id']?.toString();
+                          if (blogId == null || commentId == null) return;
+
+                          final updated =
+                              await showDialog<Map<String, dynamic>>(
+                                context: context,
+                                builder: (_) => EditCommentDialog(
+                                  blogId: blogId,
+                                  comment: c,
+                                  blogRepo: _blogRepo,
+                                ),
+                              );
+
+                          if (!mounted || updated == null) return;
+
+                          await _reloadComments();
+                          _toast('Comment updated');
+                        },
+                        onDelete: () async {
+                          final blogId = _blog?['id']?.toString();
+                          final commentId = c['id']?.toString();
+                          if (blogId == null || commentId == null) return;
+
+                          final ok = await _confirmDeleteComment();
+                          if (!ok) return;
+
+                          try {
+                            await _blogRepo.deleteComment(
+                              blogId: blogId,
+                              commentId: commentId,
+                            );
+
+                            if (!mounted) return;
+
+                            _toast('Comment deleted');
+                            await _reloadComments();
+                          } catch (e) {
+                            _toast('Delete failed: $e');
+                          }
+                        },
+                      ),
+                  ],
+                ),
+
+              const SizedBox(height: 12),
+
+              // const Divider(),
             ],
           ],
         ),
@@ -770,25 +771,38 @@ class _CommentTile extends StatelessWidget {
                 ),
               ),
               if (isOwner)
-                Column(
-                  children: [
-                    IconButton(
-                      tooltip: 'Edit',
-                      onPressed: onEdit,
-                      icon: Icon(
-                        Icons.edit_outlined,
-                        color: Theme.of(context).colorScheme.error,
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit!();
+                    } else if (value == 'delete') {
+                      onDelete!();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.edit_outlined,
+                          // color: Color.fromARGB(213, 3, 39, 245),
+                        ),
+                        title: Text('Edit'),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Delete',
-                      onPressed: onDelete,
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: Theme.of(context).colorScheme.error,
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.delete_outline,
+                          color: Color.fromARGB(255, 245, 3, 43),
+                        ),
+                        title: Text('Delete'),
+                        textColor: Color.fromARGB(255, 245, 3, 43),
                       ),
                     ),
                   ],
+                  icon: const Icon(Icons.more_vert),
                 ),
             ],
           ),
@@ -799,28 +813,7 @@ class _CommentTile extends StatelessWidget {
             const SizedBox(height: 10),
             SizedBox(
               height: 90,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: imgs.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final path = imgs[i].toString();
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      storage.getPublicUrl(path),
-                      width: 120,
-                      height: 90,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox(
-                        width: 120,
-                        height: 90,
-                        child: Icon(Icons.broken_image),
-                      ),
-                    ),
-                  );
-                },
-              ),
+              child: ImagesListView(images: imgs, storage: storage),
             ),
           ],
         ],
