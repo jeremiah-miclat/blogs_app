@@ -205,7 +205,7 @@ class _BlogPageState extends State<BlogPage> {
           if (newId == null || newId.isEmpty) return;
 
           if (_knownCommentIds.contains(newId)) return;
-
+          await Future.delayed(const Duration(seconds: 5));
           await _reloadComments();
 
           for (final c in _comments) {
@@ -576,10 +576,17 @@ class _BlogPageState extends State<BlogPage> {
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ImagePreview(
-                    images: _commentImgs,
-                    disabled: _commentSubmitting,
-                    onRemove: _removeCommentImgAt,
+                  child: SizedBox(
+                    height: 150,
+                    width: double.infinity,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: ImagePreview(
+                        images: _commentImgs,
+                        disabled: _commentSubmitting,
+                        onRemove: _removeCommentImgAt,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
