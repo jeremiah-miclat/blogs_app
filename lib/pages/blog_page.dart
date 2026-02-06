@@ -514,38 +514,19 @@ class _BlogPageState extends State<BlogPage> {
             const SizedBox(height: 24),
 
             if (imgs.isNotEmpty) ...[
+              // Text('Images', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
-
-              CarouselSlider.builder(
-                itemCount: imgs.length,
-                itemBuilder: (context, index, realIndex) {
-                  final publicUrl = storage.getPublicUrl(imgs[index]);
-
-                  return SizedBox(
-                    width: double.infinity,
+              for (final img in imgs)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 250),
                     child: Image.network(
-                      publicUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) {
-                        return const Center(
-                          child: Icon(Icons.broken_image_outlined),
-                        );
-                      },
+                      storage.getPublicUrl(img),
+                      fit: BoxFit.contain,
                     ),
-                  );
-                },
-                options: CarouselOptions(
-                  height: 400,
-                  aspectRatio: 16 / 9,
-                  viewportFraction: 0.8,
-                  initialPage: 0,
-                  enableInfiniteScroll: true,
-                  reverse: false,
-                  enlargeCenterPage: true,
-                  enlargeFactor: 0.3,
-                  scrollDirection: Axis.horizontal,
+                  ),
                 ),
-              ),
             ],
 
             const SizedBox(height: 16),
