@@ -1,7 +1,7 @@
 import 'package:blogs_app/ext/snackbar_ext.dart';
 import 'package:blogs_app/pages/blog_page.dart';
 import 'package:blogs_app/services/supabase_service.dart';
-import 'package:blogs_app/widgets/appbar.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,7 +28,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   PlatformFile? _pfImage;
   String? _imgUrl;
-  Map<String, dynamic>? _blog;
 
   @override
   void initState() {

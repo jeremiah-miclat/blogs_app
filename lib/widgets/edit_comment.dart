@@ -5,7 +5,6 @@ import 'package:blogs_app/widgets/image_preview.dart';
 import 'package:blogs_app/widgets/image_preview_edit.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditCommentDialog extends StatefulWidget {
   final String blogId;

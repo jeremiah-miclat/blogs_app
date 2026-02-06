@@ -10,8 +10,6 @@ import 'package:blogs_app/widgets/edit_comment.dart';
 import 'package:blogs_app/widgets/image_preview.dart';
 import 'package:blogs_app/widgets/images_listview.dart';
 import 'package:blogs_app/widgets/profile_avatar.dart';
-import 'package:carousel_slider/carousel_options.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -29,8 +27,8 @@ class BlogPage extends StatefulWidget {
 class _BlogPageState extends State<BlogPage> {
   bool _loading = true;
   bool _isOwner = false;
-  String? _ownerAvatar;
-  String? _ownerName;
+  // String? _ownerAvatar;
+  // String? _ownerName;
   Map<String, dynamic>? _blog;
 
   final _blogRepo = BlogsRepository(Supabase.instance.client);
@@ -130,7 +128,7 @@ class _BlogPageState extends State<BlogPage> {
     super.initState();
     _blog = widget.blog;
     _loadOwner();
-    _ownerName = widget.blog['author_name'] ?? 'Not set';
+    // _ownerName = widget.blog['author_name'] ?? 'Not set';
     SupabaseRealtimeService.instance.start();
     _startRealtime();
     _reloadComments();
@@ -298,12 +296,13 @@ class _BlogPageState extends State<BlogPage> {
             .first
             .toString();
 
-        final ownerAvatar = Supabase.instance.client.storage
+        // final ownerAvatar =
+        Supabase.instance.client.storage
             .from('profiles-image')
             .getPublicUrl(imgPath);
-        setState(() {
-          _ownerAvatar = ownerAvatar;
-        });
+        // setState(() {
+        //   _ownerAvatar = ownerAvatar;
+        // });
       }
       setState(() {
         _isOwner = ownerId == userId;
@@ -362,7 +361,7 @@ class _BlogPageState extends State<BlogPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authorId = _blog!['user_id']?.toString();
+    final authorId = _blog!['user_id']?.toString() ?? 'Not set';
     final authorName = (_blog!['author_name'] ?? 'Unknown').toString();
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -455,22 +454,20 @@ class _BlogPageState extends State<BlogPage> {
               children: [
                 InkWell(
                   borderRadius: BorderRadius.circular(48),
-                  onTap: authorId == null
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PublicProfilePage(
-                                userId: authorId,
-                                authorName: authorName,
-                              ),
-                            ),
-                          );
-                        },
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfilePage(
+                          userId: authorId,
+                          authorName: authorName,
+                        ),
+                      ),
+                    );
+                  },
                   child: ProfileAvatar(
                     supabaseClient: SupabaseService.client,
-                    userId: authorId!,
+                    userId: authorId,
                     authorName: authorName,
                     radius: 20,
                   ),
@@ -479,19 +476,17 @@ class _BlogPageState extends State<BlogPage> {
                 const SizedBox(width: 8),
 
                 InkWell(
-                  onTap: authorId == null
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PublicProfilePage(
-                                userId: authorId,
-                                authorName: authorName,
-                              ),
-                            ),
-                          );
-                        },
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfilePage(
+                          userId: authorId,
+                          authorName: authorName,
+                        ),
+                      ),
+                    );
+                  },
                   child: Text(
                     authorName,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
