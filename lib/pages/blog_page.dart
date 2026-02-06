@@ -531,30 +531,37 @@ class _BlogPageState extends State<BlogPage> {
             ],
 
             if (imgs.length > 1) ...[
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: imgs.length,
-                itemBuilder: (BuildContext context, int i) {
-                  return
-                  // InteractiveViewer(child:
-                  SizedBox(
-                    height: 250,
-                    width: double.infinity,
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 960),
+                  child: SizedBox(
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: imgs.length,
+                      itemBuilder: (BuildContext context, int i) {
+                        return
+                        // InteractiveViewer(child:
+                        SizedBox(
+                          height: 250,
+                          width: double.infinity,
 
-                    child: Image.network(
-                      storage.getPublicUrl(imgs[i]),
-                      fit: BoxFit.cover,
+                          child: Image.network(
+                            storage.getPublicUrl(imgs[i]),
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                        // );
+                      },
+
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1,
+                      ),
                     ),
-                  );
-                  // );
-                },
-
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 1,
+                  ),
                 ),
               ),
             ],
