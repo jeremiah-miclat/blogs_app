@@ -164,6 +164,7 @@ class _BlogPageState extends State<BlogPage> {
             _loading = true;
           });
           try {
+            await Future.delayed(const Duration(seconds: 5));
             final result = await _blogRepo.getBlogById(blogId);
             debugPrint('Update result: $result');
             setState(() {

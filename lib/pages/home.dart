@@ -48,6 +48,7 @@ class _HomePageState extends State<HomePage> {
           return;
         }
         debugPrint('Inserted: ${event['new']}');
+        await Future.delayed(const Duration(seconds: 5));
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -78,6 +79,7 @@ class _HomePageState extends State<HomePage> {
         if (newRow == null) return;
         final blogId = newRow['id'];
         try {
+          await Future.delayed(const Duration(seconds: 5));
           final fetchedBlog = await _blogRepo.getBlogById(blogId);
 
           final fetchedId = fetchedBlog['id'];
