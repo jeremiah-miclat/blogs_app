@@ -70,6 +70,14 @@ class SupabaseRealtimeService {
               });
             }
 
+            if (payload.eventType == PostgresChangeEvent.update) {
+              _controller.add({
+                'table': 'comments',
+                'event': 'UPDATE',
+                'new': payload.newRecord,
+              });
+            }
+
             if (payload.eventType == PostgresChangeEvent.delete) {
               _controller.add({
                 'table': 'comments',

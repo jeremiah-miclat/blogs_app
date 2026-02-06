@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:typed_data';
+import 'dart:ui';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 
 class ImagePreview extends StatelessWidget {
   final List<dynamic> images;
@@ -15,49 +17,71 @@ class ImagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (int i = 0; i < images.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SizedBox(
-              height: 400,
-              width: double.infinity,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.memory(
-                      images[i].bytes as Uint8List,
-                      fit: BoxFit.cover,
-                    ),
+    final controller = ScrollController();
 
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: InkWell(
-                        onTap: disabled ? null : () => onRemove(i),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: Colors.white,
+    return SizedBox(
+      height: 150,
+      child: ScrollConfiguration(
+        behavior: const MaterialScrollBehavior().copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+            PointerDeviceKind.stylus,
+          },
+        ),
+        child: Scrollbar(
+          controller: controller,
+          thumbVisibility: true,
+          child: ListView.builder(
+            controller: controller,
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            physics: disabled
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            itemCount: images.length,
+            itemBuilder: (context, i) {
+              final bytes = images[i].bytes as Uint8List;
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 150,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.memory(bytes, fit: BoxFit.cover),
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: InkWell(
+                            onTap: disabled ? null : () => onRemove(i),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              child: const Icon(
+                                Icons.close,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
-      ],
+        ),
+      ),
     );
   }
 }

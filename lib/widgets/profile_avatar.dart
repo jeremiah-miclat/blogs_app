@@ -55,7 +55,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       if (!mounted) return;
 
       if (files.isNotEmpty) {
-        debugPrint('files: ${files.length}');
+        // debugPrint('files: ${files.length}');
         final file = files.first;
         final path = '${widget.userId}/${file.name}';
         _avatarUrl = storage.getPublicUrl(path);

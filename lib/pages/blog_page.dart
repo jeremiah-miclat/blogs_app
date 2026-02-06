@@ -6,8 +6,11 @@ import 'package:blogs_app/pages/public_profile_page';
 import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
+import 'package:blogs_app/widgets/edit_comment.dart';
 import 'package:blogs_app/widgets/image_preview.dart';
 import 'package:blogs_app/widgets/profile_avatar.dart';
+import 'package:carousel_slider/carousel_options.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -203,7 +206,7 @@ class _BlogPageState extends State<BlogPage> {
           final userName = _blogRepo.currentUser?.userMetadata?['display_name']
               .toString();
           final commentAuthorName = newRow['author_name']?.toString();
-          debugPrint('User: $userName, Commenter: $commentAuthorName');
+          // debugPrint('User: $userName, Commenter: $commentAuthorName');
           if (userName == commentAuthorName) {
             return;
           }
@@ -218,6 +221,22 @@ class _BlogPageState extends State<BlogPage> {
             final id = c['id']?.toString();
             if (id != null) _knownCommentIds.add(id);
           }
+        }
+
+        if (type == 'UPDATE') {
+          final newRow = (event['new'] as Map?)?.cast<String, dynamic>();
+          if (newRow == null) return;
+          if (newRow['blog_id']?.toString() != blogId) return;
+          if (!_commentsLoadedOnce) return;
+          final userName = _blogRepo.currentUser?.userMetadata?['display_name']
+              .toString();
+          final commentAuthorName = newRow['author_name']?.toString();
+          if (userName == commentAuthorName) {
+            return;
+          }
+          await Future.delayed(const Duration(seconds: 5));
+          await _reloadComments();
+          return;
         }
 
         if (type == 'DELETE') {
@@ -495,19 +514,38 @@ class _BlogPageState extends State<BlogPage> {
             const SizedBox(height: 24),
 
             if (imgs.isNotEmpty) ...[
-              // Text('Images', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
-              for (final img in imgs)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 250),
+
+              CarouselSlider.builder(
+                itemCount: imgs.length,
+                itemBuilder: (context, index, realIndex) {
+                  final publicUrl = storage.getPublicUrl(imgs[index]);
+
+                  return SizedBox(
+                    width: double.infinity,
                     child: Image.network(
-                      storage.getPublicUrl(img),
-                      fit: BoxFit.contain,
+                      publicUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) {
+                        return const Center(
+                          child: Icon(Icons.broken_image_outlined),
+                        );
+                      },
                     ),
-                  ),
+                  );
+                },
+                options: CarouselOptions(
+                  height: 400,
+                  aspectRatio: 16 / 9,
+                  viewportFraction: 0.8,
+                  initialPage: 0,
+                  enableInfiniteScroll: true,
+                  reverse: false,
+                  enlargeCenterPage: true,
+                  enlargeFactor: 0.3,
+                  scrollDirection: Axis.horizontal,
                 ),
+              ),
             ],
 
             const SizedBox(height: 16),
@@ -547,6 +585,28 @@ class _BlogPageState extends State<BlogPage> {
                         comment: c,
                         currentUserId:
                             Supabase.instance.client.auth.currentUser?.id,
+
+                        onEdit: () async {
+                          final blogId = _blog?['id']?.toString();
+                          final commentId = c['id']?.toString();
+                          if (blogId == null || commentId == null) return;
+
+                          final updated =
+                              await showDialog<Map<String, dynamic>>(
+                                context: context,
+                                builder: (_) => EditCommentDialog(
+                                  blogId: blogId,
+                                  comment: c,
+                                  blogRepo: _blogRepo,
+                                ),
+                              );
+
+                          if (!mounted || updated == null) return;
+
+                          // easiest: reload (keeps everything consistent with storage listing)
+                          await _reloadComments();
+                          _toast('Comment updated');
+                        },
                         onDelete: () async {
                           final blogId = _blog?['id']?.toString();
                           final commentId = c['id']?.toString();
@@ -582,17 +642,10 @@ class _BlogPageState extends State<BlogPage> {
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: SizedBox(
-                    height: 150,
-                    width: double.infinity,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: ImagePreview(
-                        images: _commentImgs,
-                        disabled: _commentSubmitting,
-                        onRemove: _removeCommentImgAt,
-                      ),
-                    ),
+                  child: ImagePreview(
+                    images: _commentImgs,
+                    disabled: _commentSubmitting,
+                    onRemove: _removeCommentImgAt,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -645,11 +698,13 @@ class _CommentTile extends StatelessWidget {
   final Map<String, dynamic> comment;
   final String? currentUserId;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const _CommentTile({
     required this.comment,
     required this.currentUserId,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -660,6 +715,7 @@ class _CommentTile extends StatelessWidget {
     final storage = Supabase.instance.client.storage.from('comments-image');
 
     final commentUserId = comment['user_id']?.toString();
+    final safeUserId = commentUserId ?? '';
     final commenterName = comment['author_name']?.toString();
     final isOwner =
         currentUserId != null &&
@@ -683,7 +739,7 @@ class _CommentTile extends StatelessWidget {
                   children: [
                     ProfileAvatar(
                       supabaseClient: SupabaseService.client,
-                      userId: commentUserId!,
+                      userId: safeUserId,
                       authorName: commenterName ?? 'Not set',
                       radius: 10,
                     ),
@@ -696,13 +752,25 @@ class _CommentTile extends StatelessWidget {
                 ),
               ),
               if (isOwner)
-                IconButton(
-                  tooltip: 'Delete',
-                  onPressed: onDelete,
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                Column(
+                  children: [
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: onEdit,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      onPressed: onDelete,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),

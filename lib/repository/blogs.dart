@@ -319,4 +319,50 @@ class BlogsRepository {
 
     await _supabaseClient.from('comments').delete().eq('id', commentId);
   }
+
+  Future<Map<String, dynamic>> updateComment({
+    required String blogId,
+    required String commentId,
+    required String content,
+    required List<String> removeImagePaths,
+    required List<PlatformFile> newFiles,
+  }) async {
+    if (userId == null) throw Exception('Not logged in');
+
+    final updatedRow = await _supabaseClient
+        .from('comments')
+        .update({'content': content.trim()})
+        .eq('id', commentId)
+        .select()
+        .single();
+
+    final storage = _supabaseClient.storage.from('comments-image');
+
+    if (removeImagePaths.isNotEmpty) {
+      await storage.remove(removeImagePaths);
+    }
+
+    for (final f in newFiles) {
+      if (f.bytes == null) continue;
+      final ext = (f.extension ?? '').toLowerCase();
+      if (ext.isEmpty) continue;
+
+      final safeName = '${_dtPrefix()}_${f.name}';
+      final path = '$blogId/$commentId/$safeName';
+
+      await storage.uploadBinary(
+        path,
+        f.bytes!,
+        fileOptions: const FileOptions(upsert: true),
+      );
+    }
+
+    final listed = await storage.list(path: '$blogId/$commentId');
+    final images = listed
+        .where((x) => _isImgName(x.name))
+        .map((x) => '$blogId/$commentId/${x.name}')
+        .toList();
+
+    return {...Map<String, dynamic>.from(updatedRow), 'images': images};
+  }
 }
