@@ -37,7 +37,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
   @override
   void didUpdateWidget(covariant ProfileAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If profile changed, reload avatar
+    // debugPrint('UserId: ${oldWidget.userId}');
     if (oldWidget.userId != widget.userId ||
         oldWidget.bucket != widget.bucket) {
       _loading = true;
@@ -55,13 +55,13 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       if (!mounted) return;
 
       if (files.isNotEmpty) {
-        // Pick first file; optionally you can prefer newest, or match a specific filename.
+        debugPrint('files: ${files.length}');
         final file = files.first;
         final path = '${widget.userId}/${file.name}';
         _avatarUrl = storage.getPublicUrl(path);
       }
-    } catch (_) {
-      // ignore: keep fallback initial
+    } catch (e) {
+      // debugPrint('Error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

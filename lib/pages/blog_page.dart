@@ -200,7 +200,13 @@ class _BlogPageState extends State<BlogPage> {
           if (!_commentsLoadedOnce) return;
 
           if (newRow['blog_id']?.toString() != blogId) return;
-
+          final userName = _blogRepo.currentUser?.userMetadata?['display_name']
+              .toString();
+          final commentAuthorName = newRow['author_name']?.toString();
+          debugPrint('User: $userName, Commenter: $commentAuthorName');
+          if (userName == commentAuthorName) {
+            return;
+          }
           final newId = newRow['id']?.toString();
           if (newId == null || newId.isEmpty) return;
 
