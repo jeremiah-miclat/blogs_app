@@ -6,6 +6,7 @@ import 'package:blogs_app/repository/blogs.dart';
 import 'package:blogs_app/services/db_realtime_service.dart';
 import 'package:blogs_app/services/supabase_service.dart';
 import 'package:blogs_app/widgets/appbar.dart';
+import 'package:blogs_app/widgets/drawer.dart';
 import 'package:blogs_app/widgets/profile_avatar.dart';
 
 import 'package:flutter/material.dart';
@@ -174,7 +175,7 @@ class _HomePageState extends State<HomePage> {
     final storage = Supabase.instance.client.storage.from('blogs-image');
 
     return Scaffold(
-      drawer: const Drawer(child: Center(child: Text('Drawer Menu'))),
+      drawer: DrawerCustom(blogs: _blogs),
       appBar: Appbar.build(
         context,
         title: 'Blog App',
