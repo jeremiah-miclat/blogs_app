@@ -513,7 +513,7 @@ class _BlogPageState extends State<BlogPage> {
 
             const SizedBox(height: 24),
 
-            if (imgs.isNotEmpty) ...[
+            if (imgs.length < 2 && imgs.isNotEmpty) ...[
               // Text('Images', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               for (final img in imgs)
@@ -527,6 +527,35 @@ class _BlogPageState extends State<BlogPage> {
                     ),
                   ),
                 ),
+            ],
+
+            if (imgs.length > 1) ...[
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: imgs.length,
+                itemBuilder: (BuildContext context, int i) {
+                  return
+                  // InteractiveViewer(child:
+                  SizedBox(
+                    height: 250,
+                    width: double.infinity,
+
+                    child: Image.network(
+                      storage.getPublicUrl(imgs[i]),
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                  // );
+                },
+
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1,
+                ),
+              ),
             ],
 
             const SizedBox(height: 16),
